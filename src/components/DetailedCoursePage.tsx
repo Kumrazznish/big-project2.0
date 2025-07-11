@@ -411,7 +411,8 @@ const DetailedCoursePage: React.FC<DetailedCoursePageProps> = ({
   const [viewMode, setViewMode] = useState<'content' | 'ai-features'>('content');
 
   useEffect(() => {
-    if (detailedCourse.chapters.length > 0 && !selectedChapter) {
+    // Always select the first chapter when the detailed course loads
+    if (detailedCourse.chapters.length > 0) {
       setSelectedChapter(detailedCourse.chapters[0]);
     }
   }, [detailedCourse, selectedChapter]);

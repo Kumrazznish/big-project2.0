@@ -57,7 +57,10 @@ const AppContent: React.FC = () => {
   const handleDetailedCourseGenerated = (courseData: any) => {
     console.log('Detailed course generated:', courseData);
     setDetailedCourse(courseData);
-    setCurrentState('detailed-course');
+    // Automatically navigate to the detailed course view
+    setTimeout(() => {
+      setCurrentState('detailed-course');
+    }, 500);
   };
 
   const handleChapterCompleted = (chapterId: string) => {
