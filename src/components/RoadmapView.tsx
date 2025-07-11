@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { geminiService } from '../services/geminiService';
+import { supabaseService } from '../services/supabaseService';
 import { userService } from '../services/userService';
 import { CheckCircle, Circle, Play, Book, Award, Clock, ArrowLeft, Zap, Target, Users, TrendingUp, Star, ChevronRight, Sparkles, Brain, Code, Palette, Calculator, Globe, Lightbulb, BookOpen, Trophy, Timer, BarChart3, Rocket, Shield, FileText, Video, AlertCircle, Youtube, ExternalLink, Download, Layers, Cpu, Database, Smartphone, Camera, Headphones, Monitor, Wifi, Settings, Lock } from 'lucide-react';
 
@@ -51,12 +52,13 @@ interface DetailedCourse {
 interface RoadmapViewProps {
   subject: string;
   difficulty: string;
+  roadmapId?: string;
   onBack: () => void;
   onChapterSelect: (chapter: Chapter) => void;
   onDetailedCourseGenerated: (courseData: any) => void;
 }
 
-const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, onChapterSelect, onDetailedCourseGenerated }) => {
+const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapId, onBack, onChapterSelect, onDetailedCourseGenerated }) => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
@@ -66,7 +68,7 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
-  const [currentRoadmapId, setCurrentRoadmapId] = useState<string>('');
+  const [currentRoadmapId, setCurrentRoadmapId] = useState<string>(roadmapId || '');
   const [courseProgress, setCourseProgress] = useState<{ [key: string]: boolean }>({});
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, currentChapter: '' });
 
@@ -75,23 +77,40 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
   useEffect(() => {
     console.log('RoadmapView mounted with:', { subject, difficulty });
     
-    // Generate unique roadmap ID
-    const roadmapId = `roadmap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setCurrentRoadmapId(roadmapId);
-    
-    // Load existing detailed course from localStorage if available
-    const savedCourse = localStorage.getItem(`detailed_course_${roadmapId}`);
-    if (savedCourse) {
-      try {
-        const parsedCourse = JSON.parse(savedCourse);
-        setDetailedCourse(parsedCourse);
-      } catch (error) {
-        console.error('Failed to parse saved course:', error);
-      }
+    if (roadmapId) {
+      // Load existing roadmap from database
+      setCurrentRoadmapId(roadmapId);
+      loadExistingRoadmap(roadmapId);
+    } else {
+      // Generate new roadmap
+      const newRoadmapId = `roadmap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setCurrentRoadmapId(newRoadmapId);
+      generateRoadmap();
     }
+  }, [subject, difficulty, roadmapId]);
+
+  const loadExistingRoadmap = async (roadmapId: string) => {
+    if (!user) return;
     
-    generateRoadmap();
-  }, [subject, difficulty]);
+    try {
+      // Load roadmap from Supabase
+      const roadmaps = await supabaseService.getUserRoadmaps(user.id);
+      const existingRoadmap = roadmaps.find(r => r.id === roadmapId);
+      
+      if (existingRoadmap) {
+        setRoadmap(existingRoadmap.roadmap_data);
+        
+        // Check if detailed course exists
+        const detailedCourse = await supabaseService.getDetailedCourse(roadmapId);
+        if (detailedCourse) {
+          setDetailedCourse(detailedCourse.course_data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load existing roadmap:', error);
+      setError('Failed to load roadmap');
+    }
+  };
 
   const generateRoadmap = async () => {
     console.log('Generating roadmap for:', { subject, difficulty });
@@ -108,26 +127,18 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
       console.log('Roadmap generated successfully:', roadmapData);
       setRoadmap(roadmapData);
       
-      // Save roadmap to user's history if logged in
+      // Save roadmap to database if logged in
       if (user) {
         try {
-          const preferences = JSON.parse(localStorage.getItem('learningPreferences') || '{}');
-          await userService.addToHistory(user._id, {
+          const savedRoadmap = await supabaseService.saveRoadmap(
+            user.id,
             subject,
             difficulty,
-            roadmapId: currentRoadmapId,
-            chapterProgress: roadmapData.chapters.map((chapter: Chapter) => ({
-              chapterId: chapter.id,
-              completed: false
-            })),
-            learningPreferences: {
-              learningStyle: preferences.learningStyle || 'mixed',
-              timeCommitment: preferences.timeCommitment || 'regular',
-              goals: preferences.goals || []
-            }
-          });
+            roadmapData
+          );
+          setCurrentRoadmapId(savedRoadmap.id);
         } catch (historyError) {
-          console.error('Failed to save to history:', historyError);
+          console.error('Failed to save roadmap:', historyError);
         }
       }
       
@@ -302,12 +313,14 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
       };
       
       setDetailedCourse(detailedCourseData);
-      
-      // Notify parent component
+
+      // Save detailed course to database
+      if (user && currentRoadmapId) {
+        await supabaseService.saveDetailedCourse(user.id, currentRoadmapId, detailedCourseData);
+      }
+
+      // Notify parent component and navigate
       onDetailedCourseGenerated(detailedCourseData);
-      
-      // Save detailed course to localStorage for persistence
-      localStorage.setItem(`detailed_course_${currentRoadmapId}`, JSON.stringify(detailedCourseData));
       
     } catch (error) {
       console.error('Failed to generate detailed course:', error);
@@ -326,10 +339,10 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
   };
 
   const handleChapterClick = (chapter: Chapter) => {
-    // Allow chapter selection even without detailed course for basic roadmap view
-    const courseChapter = detailedCourse?.chapters.find(c => c.id === chapter.id);
-    
-    // Create enhanced chapter object with course content if available
+    // Only allow chapter selection if detailed course exists
+    if (!detailedCourse) return;
+
+    const courseChapter = detailedCourse.chapters.find(c => c.id === chapter.id);
     const enhancedChapter = {
       ...chapter,
       courseContent: courseChapter?.content,
@@ -341,39 +354,16 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
   };
 
   const updateChapterProgress = async (chapterId: string, completed: boolean) => {
-    if (!user || !currentRoadmapId) return;
+    if (!currentRoadmapId) return;
     
     try {
-      // Update local state
       setCourseProgress(prev => ({
         ...prev,
         [chapterId]: completed
       }));
-      
-      // Update in database
-      const history = await userService.getUserHistory(user._id);
-      const currentHistory = history.find(h => h.roadmapId === currentRoadmapId);
-      
-      if (currentHistory) {
-        await userService.updateChapterProgress(
-          user._id,
-          currentHistory._id,
-          chapterId,
-          completed
-        );
-      }
-      
-      // Update detailed course if it exists
-      if (detailedCourse) {
-        const updatedCourse = {
-          ...detailedCourse,
-          chapters: detailedCourse.chapters.map(chapter =>
-            chapter.id === chapterId ? { ...chapter, completed } : chapter
-          )
-        };
-        setDetailedCourse(updatedCourse);
-        localStorage.setItem(`detailed_course_${currentRoadmapId}`, JSON.stringify(updatedCourse));
-      }
+
+      // Update in Supabase
+      await supabaseService.updateChapterProgress(currentRoadmapId, chapterId, completed);
       
     } catch (error) {
       console.error('Failed to update chapter progress:', error);
@@ -807,7 +797,7 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
                         >
                           {/* Status Badges */}
                           <div className="absolute top-6 right-6 flex items-center space-x-2">
-                            {hasDetailedContent && (
+                            {detailedCourse && (
                               <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                                 <Sparkles className="w-4 h-4 text-white" />
                               </div>
@@ -898,7 +888,7 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
                             </div>
 
                             {/* Content Status */}
-                            {hasDetailedContent ? (
+                            {detailedCourse ? (
                               <div className={`flex items-center space-x-3 ${
                                 theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
                               }`}>
@@ -906,11 +896,11 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
                                 <span className="font-medium">Enhanced content & quiz available</span>
                               </div>
                             ) : (
-                              <div className={`flex items-center space-x-3 ${
+                              <div className={`flex items-center space-x-3 cursor-not-allowed ${
                                 theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
                               }`}>
                                 <BookOpen className="w-5 h-5" />
-                                <span className="font-medium">Basic roadmap content</span>
+                                <span className="font-medium">Generate detailed course to access</span>
                               </div>
                             )}
                           </div>
@@ -938,13 +928,13 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
               <h3 className={`text-3xl font-bold mb-6 transition-colors ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
-                Ready for Enhanced Learning?
+                Unlock Enhanced Learning Experience
               </h3>
               <p className={`text-xl mb-10 max-w-3xl mx-auto transition-colors ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                Generate comprehensive course content with detailed explanations, interactive code examples, 
-                YouTube video lessons, practical exercises, and challenging quizzes for each chapter.
+                Transform your roadmap into a comprehensive course with AI-generated content, interactive examples, 
+                video lessons, hands-on exercises, and personalized quizzes for every chapter.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className={`p-6 rounded-2xl transition-colors ${
@@ -997,15 +987,16 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, onBack, 
             <button
               onClick={generateDetailedCourse}
               disabled={generatingCourse}
-              className="px-16 py-6 rounded-2xl font-bold text-2xl transition-all duration-300 flex items-center space-x-4 mx-auto bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 hover:scale-105 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group px-16 py-6 rounded-2xl font-bold text-2xl transition-all duration-300 flex items-center space-x-4 mx-auto bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 hover:scale-105 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-10 h-10" />
+              <Sparkles className="w-10 h-10 group-hover:rotate-12 transition-transform" />
               <span>{generatingCourse ? 'Generating...' : 'Generate Enhanced Course'}</span>
+              {!generatingCourse && <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />}
             </button>
             <p className={`mt-4 text-lg transition-colors ${
               theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
-              Create comprehensive lessons with videos, code examples, and interactive quizzes
+              Transform your roadmap into a complete learning experience with AI-powered content
             </p>
           </div>
         )}
