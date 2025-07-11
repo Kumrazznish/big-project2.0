@@ -603,6 +603,28 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapI
         </div>
       </div>
 
+      {/* Quick Action Bar - Always Visible */}
+      <div className={`backdrop-blur-xl border-b sticky top-20 z-10 transition-colors ${
+        theme === 'dark' ? 'bg-black/20 border-white/10' : 'bg-white/80 border-gray-200'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              {detailedCourse ? '✅ Enhanced course available' : '⚡ Basic roadmap ready'}
+            </div>
+            {!detailedCourse && !generatingCourse && (
+              <button
+                onClick={generateDetailedCourse}
+                className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-300 font-semibold text-sm flex items-center space-x-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Generate Enhanced Course</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 py-12">
         {/* Course Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -800,6 +822,21 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapI
                             {detailedCourse && (
                               <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                                 <Sparkles className="w-4 h-4 text-white" />
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"></div>
+                              </div>
+                            )}
+                            {!detailedCourse && (
+                              <div className="w-8 h-8 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center opacity-50">
+                                <Sparkles className="w-4 h-4 text-white" />
+                              </div>
+                            )}
+                            {isCompleted ? (
+                              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                                <CheckCircle className="w-6 h-6 text-white" />
+                              </div>
+                            ) : (
+                              <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${
+                                theme === 'dark' ? 'border-gray-600' : 'border-gray-300'
                               </div>
                             )}
                             {isCompleted ? (
@@ -890,17 +927,26 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapI
                             {/* Content Status */}
                             {detailedCourse ? (
                               <div className={`flex items-center space-x-3 ${
-                                theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                                theme === 'dark' ? 'text-green-400' : 'text-green-600'
                               }`}>
-                                <Video className="w-5 h-5" />
-                                <span className="font-medium">Enhanced content & quiz available</span>
+                                <CheckCircle className="w-5 h-5" />
+                                <span className="font-medium">✅ Enhanced content ready!</span>
                               </div>
                             ) : (
-                              <div className={`flex items-center space-x-3 cursor-not-allowed ${
-                                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                              }`}>
-                                <BookOpen className="w-5 h-5" />
-                                <span className="font-medium">Generate detailed course to access</span>
+                              <div className="space-y-2">
+                                <div className={`flex items-center space-x-3 ${
+                                  theme === 'dark' ? 'text-orange-400' : 'text-orange-600'
+                                }`}>
+                                  <Clock className="w-5 h-5" />
+                                  <span className="font-medium">⚡ Basic content available</span>
+                                </div>
+                                <button
+                                  onClick={generateDetailedCourse}
+                                  disabled={generatingCourse}
+                                  className="text-purple-500 hover:text-purple-600 font-medium text-sm underline"
+                                >
+                                  Generate enhanced version →
+                                </button>
                               </div>
                             )}
                           </div>
@@ -914,28 +960,40 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapI
           </div>
         </div>
 
-        {/* Generate Detailed Course Button */}
-        {!detailedCourse && !generatingCourse && user && (
-          <div className="text-center">
+        {/* Generate Detailed Course Button - Always Visible */}
+        {!detailedCourse && !generatingCourse && (
+          <div className="text-center mb-12">
             <div className={`backdrop-blur-xl border rounded-3xl p-10 mb-8 transition-colors ${
               theme === 'dark' 
                 ? 'bg-slate-800/50 border-white/10' 
                 : 'bg-white/80 border-gray-200'
             }`}>
-              <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-8">
+              <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
                 <Sparkles className="w-12 h-12 text-white" />
               </div>
               <h3 className={`text-3xl font-bold mb-6 transition-colors ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
-                Unlock Enhanced Learning Experience
+                🚀 Ready to Supercharge Your Learning?
               </h3>
               <p className={`text-xl mb-10 max-w-3xl mx-auto transition-colors ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                Transform your roadmap into a comprehensive course with AI-generated content, interactive examples, 
+                Transform your basic roadmap into a comprehensive course with AI-generated content, interactive examples, 
                 video lessons, hands-on exercises, and personalized quizzes for every chapter.
               </p>
+              
+              {/* Enhanced Features Preview */}
+              <div className={`p-6 rounded-2xl mb-8 border-l-4 border-purple-500 transition-colors ${
+                theme === 'dark' ? 'bg-purple-500/10' : 'bg-purple-50'
+              }`}>
+                <p className={`text-lg font-semibold transition-colors ${
+                  theme === 'dark' ? 'text-purple-400' : 'text-purple-700'
+                }`}>
+                  ✨ Generate detailed content for all {roadmap.chapters.length} chapters with AI-powered explanations, code examples, quizzes, and video lessons!
+                </p>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                 <div className={`p-6 rounded-2xl transition-colors ${
                   theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
@@ -986,7 +1044,175 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapI
             
             <button
               onClick={generateDetailedCourse}
-              disabled={generatingCourse}
+              disabled={generatingCourse || !roadmap}
+              className="group px-16 py-6 rounded-2xl font-bold text-2xl transition-all duration-300 flex items-center space-x-4 mx-auto bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 hover:scale-105 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-10 h-10 group-hover:rotate-12 transition-transform" />
+              <span>{generatingCourse ? 'Generating...' : '🚀 Generate Enhanced Course'}</span>
+              {!generatingCourse && <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />}
+            </button>
+            <p className={`mt-4 text-lg transition-colors ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              🎯 Transform your roadmap into a complete learning experience with AI-powered content
+            </p>
+            
+            {/* Additional Info */}
+            <div className="mt-6 flex items-center justify-center space-x-6 text-sm">
+              <div className="flex items-center space-x-2 text-green-500">
+                <CheckCircle className="w-4 h-4" />
+                <span>Free to generate</span>
+              </div>
+              <div className="flex items-center space-x-2 text-blue-500">
+                <Clock className="w-4 h-4" />
+                <span>Takes 2-3 minutes</span>
+              </div>
+              <div className="flex items-center space-x-2 text-purple-500">
+                <Brain className="w-4 h-4" />
+                <span>AI-powered content</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Alternative Generate Button for Mobile */}
+        {!detailedCourse && !generatingCourse && (
+          <div className="md:hidden fixed bottom-6 left-4 right-4 z-50">
+            <button
+              onClick={generateDetailedCourse}
+              disabled={generatingCourse || !roadmap}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-300 font-bold text-lg flex items-center justify-center space-x-3 shadow-2xl"
+            >
+              <Sparkles className="w-6 h-6" />
+              <span>{generatingCourse ? 'Generating...' : 'Generate Enhanced Course'}</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* SVG Gradients */}
+      <svg className="hidden">
+        <defs>
+          <linearGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#8b5cf6" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  );
+};
+
+export default RoadmapView;
+                                theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                              }`}>
+                                <Video className="w-5 h-5" />
+                                <span className="font-medium">Enhanced content & quiz available</span>
+                              </div>
+                            ) : (
+                              <div className={`flex items-center space-x-3 cursor-not-allowed ${
+                                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                              }`}>
+                                <BookOpen className="w-5 h-5" />
+                                <span className="font-medium">Generate detailed course to access</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Generate Detailed Course Button */}
+        {!detailedCourse && !generatingCourse && (
+          <div className="text-center">
+            <div className={`backdrop-blur-xl border rounded-3xl p-10 mb-8 transition-colors ${
+              theme === 'dark' 
+                ? 'bg-slate-800/50 border-white/10' 
+                : 'bg-white/80 border-gray-200'
+            }`}>
+              <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-8">
+                <Sparkles className="w-12 h-12 text-white" />
+              </div>
+              <h3 className={`text-3xl font-bold mb-6 transition-colors ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
+                🚀 Unlock Enhanced Learning Experience
+              </h3>
+              <p className={`text-xl mb-10 max-w-3xl mx-auto transition-colors ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                Transform your roadmap into a comprehensive course with AI-generated content, interactive examples, 
+                video lessons, hands-on exercises, and personalized quizzes for every chapter.
+              </p>
+              
+              {/* Enhanced Features Preview */}
+              <div className={`p-6 rounded-2xl mb-8 border-l-4 border-purple-500 transition-colors ${
+                theme === 'dark' ? 'bg-purple-500/10' : 'bg-purple-50'
+              }`}>
+                <p className={`text-lg font-semibold transition-colors ${
+                  theme === 'dark' ? 'text-purple-400' : 'text-purple-700'
+                }`}>
+                  ✨ Generate detailed content for all {roadmap.chapters.length} chapters with AI-powered explanations, code examples, quizzes, and video lessons!
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div className={`p-6 rounded-2xl transition-colors ${
+                  theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
+                }`}>
+                  <Video className="w-8 h-8 text-red-500 mx-auto mb-4" />
+                  <h4 className={`font-bold mb-2 transition-colors ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>Video Lessons</h4>
+                  <p className={`text-sm transition-colors ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>Curated YouTube videos</p>
+                </div>
+                <div className={`p-6 rounded-2xl transition-colors ${
+                  theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
+                }`}>
+                  <Code className="w-8 h-8 text-green-500 mx-auto mb-4" />
+                  <h4 className={`font-bold mb-2 transition-colors ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>Code Examples</h4>
+                  <p className={`text-sm transition-colors ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>Interactive coding demos</p>
+                </div>
+                <div className={`p-6 rounded-2xl transition-colors ${
+                  theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
+                }`}>
+                  <Award className="w-8 h-8 text-purple-500 mx-auto mb-4" />
+                  <h4 className={`font-bold mb-2 transition-colors ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>Smart Quizzes</h4>
+                  <p className={`text-sm transition-colors ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>Adaptive assessments</p>
+                </div>
+                <div className={`p-6 rounded-2xl transition-colors ${
+                  theme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'
+                }`}>
+                  <Target className="w-8 h-8 text-blue-500 mx-auto mb-4" />
+                  <h4 className={`font-bold mb-2 transition-colors ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>Exercises</h4>
+                  <p className={`text-sm transition-colors ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>Hands-on practice</p>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={generateDetailedCourse}
+              disabled={generatingCourse || !roadmap}
               className="group px-16 py-6 rounded-2xl font-bold text-2xl transition-all duration-300 flex items-center space-x-4 mx-auto bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:from-purple-600 hover:to-pink-700 hover:scale-105 shadow-2xl hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className="w-10 h-10 group-hover:rotate-12 transition-transform" />
@@ -996,8 +1222,20 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ subject, difficulty, roadmapI
             <p className={`mt-4 text-lg transition-colors ${
               theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
-              Transform your roadmap into a complete learning experience with AI-powered content
+              🎯 Transform your roadmap into a complete learning experience with AI-powered content
             </p>
+            
+            {/* Additional Info */}
+            <div className="mt-6 flex items-center justify-center space-x-6 text-sm">
+              <div className="flex items-center space-x-2 text-green-500">
+                <CheckCircle className="w-4 h-4" />
+                <span>Free to generate</span>
+              </div>
+              <div className="flex items-center space-x-2 text-blue-500">
+                <Clock className="w-4 h-4" />
+                <span>Takes 2-3 minutes</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
