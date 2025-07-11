@@ -12,6 +12,7 @@ import RoadmapView from './components/RoadmapView';
 import DetailedCoursePage from './components/DetailedCoursePage';
 import ChapterDetails from './components/ChapterDetails';
 import QuizView from './components/QuizView';
+import { supabaseService } from './services/supabaseService';
 import { Chapter, QuizResult } from './types';
 import { userService } from './services/userService';
 import { useAuth } from './contexts/AuthContext';
@@ -32,6 +33,7 @@ const AppContent: React.FC = () => {
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [currentRoadmapId, setCurrentRoadmapId] = useState<string>('');
   const [detailedCourse, setDetailedCourse] = useState<any>(null);
+  const [isFromHistory, setIsFromHistory] = useState<boolean>(false);
 
   const handleSubjectSelect = async (subject: string, difficulty: string, learningStyle: string, timeCommitment: string, goals: string[]) => {
     console.log('Subject selected:', { subject, difficulty, learningStyle, timeCommitment, goals });
@@ -51,6 +53,7 @@ const AppContent: React.FC = () => {
     setCurrentRoadmapId(roadmapId);
     
     console.log('Navigating to roadmap view...');
+    setIsFromHistory(false);
     setCurrentState('roadmap');
   };
 
@@ -58,6 +61,7 @@ const AppContent: React.FC = () => {
     console.log('Detailed course generated:', courseData);
     setDetailedCourse(courseData);
     // Automatically navigate to the detailed course view
+    setIsFromHistory(false);
     setTimeout(() => {
       setCurrentState('detailed-course');
     }, 500);
@@ -151,7 +155,18 @@ const AppContent: React.FC = () => {
     setSelectedSubject(subject);
     setSelectedDifficulty(difficulty);
     setCurrentRoadmapId(roadmapId);
+    setIsFromHistory(true);
     setCurrentState('roadmap');
+  };
+
+  const handleViewDetailedCourse = (courseData: any) => {
+    console.log('Viewing detailed course:', courseData);
+    setDetailedCourse(courseData);
+    setSelectedSubject(courseData.title || 'Course');
+    setSelectedDifficulty('intermediate');
+    setCurrentRoadmapId(courseData.roadmapId || courseData.id);
+    setIsFromHistory(true);
+    setCurrentState('detailed-course');
   };
 
   const handleStartNewLearning = () => {
@@ -161,6 +176,7 @@ const AppContent: React.FC = () => {
     setSelectedChapter(null);
     setCurrentRoadmapId('');
     setCurrentState('selection');
+    setIsFromHistory(false);
   };
 
   // Show navigation for authenticated users
@@ -230,7 +246,10 @@ const AppContent: React.FC = () => {
       )}
       
       {currentState === 'history' && (
-        <HistoryPage onContinueLearning={handleContinueLearning} />
+        <HistoryPage 
+          onContinueLearning={handleContinueLearning}
+          onViewDetailedCourse={handleViewDetailedCourse}
+        />
       )}
       
       {currentState === 'selection' && (
@@ -244,6 +263,7 @@ const AppContent: React.FC = () => {
           <RoadmapView
             subject={selectedSubject}
             difficulty={selectedDifficulty}
+            roadmapId={isFromHistory ? currentRoadmapId : undefined}
             onBack={handleBackToSelection}
             onChapterSelect={handleChapterSelect}
             onDetailedCourseGenerated={handleDetailedCourseGenerated}
